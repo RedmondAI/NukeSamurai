@@ -50,6 +50,11 @@ https://github.com/user-attachments/assets/9d1d69ec-ff81-418f-bb70-d62226037bdf
 
 ## 🛠️ Installation
 
+
+
+https://github.com/user-attachments/assets/ba6d3801-472c-49ea-ba7a-eba28efc8f94
+
+
 ### 1. Clone this repo into your Nuke/plugins folder (usually /home/nuke15.1/plugins/):
 ```bash
 git clone https://github.com/Theo-SAMINADIN-td/NukeSamurai.git
