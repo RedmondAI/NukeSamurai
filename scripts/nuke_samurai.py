@@ -9,50 +9,6 @@ from NukeSamurai.scripts.demo import main
 nuke.tprint('Current thread : ' +str(threading.current_thread().name) )
 
 
-class BoundingBox :
-    input_path = None
-    x = None
-    y = None
-    w = None
-    h = None
-    bounding_box_coord = None
-
-
-    @classmethod
-    def getBbox(cls):
-        file_path = InputInfos.path
-        input_file_name = str(os.path.splitext(os.path.basename(file_path))[0])
-        
-        if "%04d" in input_file_name :
-          file_path = file_path.replace('%04d', str(f"{int(nuke.thisNode().knob('FrameRangeMin').value()):04}")) 
-        elif "%03d" in input_file_name :
-          file_path =  file_path.replace('%03d', str(f"{int(nuke.thisNode().knob('FrameRangeMin').value()):03}"))    
-
-        cls.input_path = file_path
-        img_path = cls.input_path
-
-        img = cv2.imread(img_path,  cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
-
-        cv2.namedWindow("BBOX - Press Enter or Space to validate",0) 
-        cv2.setWindowProperty("BBOX - Press Enter or Space to validate", cv2.WND_PROP_TOPMOST, 1)
-        cv2.resizeWindow("BBOX - Press Enter or Space to validate", 1280, 720) 
-        
-        # Bounding Box window
-        x,y,w,h = cv2.selectROI("BBOX - Press Enter or Space to validate",img, fromCenter=False, showCrosshair=False)
-
-        cv2.waitKey(13)
-        cv2.destroyWindow("BBOX - Press Enter or Space to validate") 
-
-        cls.x = x
-        cls.y = y
-        cls.w = w
-        cls.h = h
-        cls.bounding_box_coord = x,y,w,h
-        nuke.tprint(f"{x = } {y = }  {w = } {h = }")
-
-        return x,y,w,h,cls.bounding_box_coord
-
-
 class InputInfos :
     read = None
     path = None
@@ -120,7 +76,13 @@ def GenerateMask():
     video_path= nuke.thisNode().knob('FilePath').value()
     video_output_path=nuke.thisNode().knob('OutputPath').getValue()
     save_to_file=nuke.thisNode().knob('FileType').value()
-    bbox_coord=BoundingBox.bounding_box_coord
+    # Get bbox coordinates from the node knobs
+    bbox_x = nuke.thisNode().knob('BBoxX').value()
+    bbox_y = nuke.thisNode().knob('BBoxY').value()
+    bbox_w = nuke.thisNode().knob('BBoxW').value()
+    bbox_h = nuke.thisNode().knob('BBoxH').value()
+    bbox_coord = (int(bbox_x), int(bbox_y), int(bbox_w), int(bbox_h))
+    
     frame_range = [int(nuke.thisNode().knob('FrameRangeMin').value()) , int((nuke.thisNode().knob('FrameRangeMax').value()+ 1))]
     original_fps = int(InputInfos.original_fps)                        
     target_fps=int(nuke.thisNode().knob('FPS').value())
@@ -164,7 +126,12 @@ def CreateSamuraiNode():
     s.knob('name').setValue('SAMURAI')
     s.addKnob(nuke.File_Knob('FilePath', 'File Path'))
     s.addKnob(nuke.PyScript_Knob('UpdatePath', 'Update Path', 'UpdatePath()' ))
-    s.addKnob(nuke.PyScript_Knob('CreateBoundingBox', 'Create Bounding Box', 'BoundingBox.getBbox()'))
+    
+    # Add Bounding Box knobs
+    s.addKnob(nuke.Int_Knob('BBoxX', 'BBox X'))
+    s.addKnob(nuke.Int_Knob('BBoxY', 'BBox Y'))
+    s.addKnob(nuke.Int_Knob('BBoxW', 'BBox W'))
+    s.addKnob(nuke.Int_Knob('BBoxH', 'BBox H'))
    
     s.addKnob(nuke.Text_Knob(''))
 
@@ -191,9 +158,18 @@ def CreateSamuraiNode():
     s['FPS'].setFlag(nuke.STARTLINE)
     s['FrameRangeMax'].clearFlag(nuke.STARTLINE)
     s['UpdatePath'].setFlag(nuke.STARTLINE)
+    # Set BBox knobs flags and tooltips
+    s['BBoxX'].setFlag(nuke.STARTLINE)
+    s['BBoxY'].clearFlag(nuke.STARTLINE)
+    s['BBoxW'].setFlag(nuke.STARTLINE)
+    s['BBoxH'].clearFlag(nuke.STARTLINE)
+    s['BBoxX'].setTooltip("Top-left X coordinate of the bounding box.")
+    s['BBoxY'].setTooltip("Top-left Y coordinate of the bounding box.")
+    s['BBoxW'].setTooltip("Width of the bounding box.")
+    s['BBoxH'].setTooltip("Height of the bounding box.")
+
     s['GenerateMask'].setFlag(nuke.STARTLINE)
     
-    s['CreateBoundingBox'].setTooltip("Create a bounding box. Press Enter or space to validate. Press C to cancel.")
     s['FPS'].setTooltip("Target FPS for the output video")
     s['ModelType'].setTooltip("Choose your model type")
     s['OutputPath'].setTooltip("path/to/your/file_####.exr, to create an image sequence add #### or ### ")
